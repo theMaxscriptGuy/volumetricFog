@@ -24,7 +24,8 @@ public class VolumetricFog : MonoBehaviour
     int[] m_offset = new int[3];
     int[] m_resolution = new int[3];
 
-
+    public Color fogColor = Color.blue;
+    public float fogMultiplier = 1f;
     public int HorizontalRes = 160;
     public int VerticalRes = 88;
     public int DepthRes = 128;
@@ -94,28 +95,31 @@ public class VolumetricFog : MonoBehaviour
 
     void CalculateVolumeFog()
     {
-            Graphics.ClearRandomWriteTargets();
+        Graphics.ClearRandomWriteTargets();
 
-            Matrix4x4 v = m_renderCamera.worldToCameraMatrix;
-            Matrix4x4 p = m_renderCamera.projectionMatrix;
-            Matrix4x4 vp = p * v;
-            Matrix4x4 vpi = vp.inverse;
-            computeVolumeFog.SetMatrix("Inverse_View_Projection", vpi);
-
-            Vector4 cameraPlane = GetPlaneSettings(m_renderCamera.nearClipPlane, m_renderCamera.farClipPlane);
-            Shader.SetGlobalVector("_CameraPlane", cameraPlane);
+        Matrix4x4 v = m_renderCamera.worldToCameraMatrix;
+        Matrix4x4 p = m_renderCamera.projectionMatrix;
+        Matrix4x4 vp = p * v;
+        Matrix4x4 vpi = vp.inverse;
+        computeVolumeFog.SetMatrix("Inverse_View_Projection", vpi);
+        computeVolumeFog.SetFloat("fogMultiplier", fogMultiplier);
+        computeVolumeFog.SetVector("fogColor", fogColor);
+        computeVolumeFog.SetVector("cameraPos", m_renderCamera.transform.position);
         
-            m_resolution[0] = m_volumeFogTexture.width;
-            m_resolution[1] = m_volumeFogTexture.height;
-            m_resolution[2] = m_volumeFogTexture.volumeDepth;
+        Vector4 cameraPlane = GetPlaneSettings(m_renderCamera.nearClipPlane, m_renderCamera.farClipPlane);
+        Shader.SetGlobalVector("_CameraPlane", cameraPlane);
+        
+        m_resolution[0] = m_volumeFogTexture.width;
+        m_resolution[1] = m_volumeFogTexture.height;
+        m_resolution[2] = m_volumeFogTexture.volumeDepth;
 
-            computeVolumeFog.SetInts("resolution", m_resolution);
-            Shader.SetGlobalMatrix("_View_Projection", vp);
+        computeVolumeFog.SetInts("resolution", m_resolution);
+        Shader.SetGlobalMatrix("_View_Projection", vp);
 
-            Shader.SetGlobalTexture("volumeTexture", m_volumeFogTexture);
+        Shader.SetGlobalTexture("volumeTexture", m_volumeFogTexture);
             
-            computeVolumeFog.SetTexture(m_volumeFogTextureKernel, "volumeFogTexture", m_volumeFogTexture);
-            computeVolumeFog.Dispatch(m_volumeFogTextureKernel, m_volumeFogTexture.width, m_volumeFogTexture.height, 1);
+        computeVolumeFog.SetTexture(m_volumeFogTextureKernel, "volumeFogTexture", m_volumeFogTexture);
+        computeVolumeFog.Dispatch(m_volumeFogTextureKernel, m_volumeFogTexture.width, m_volumeFogTexture.height, 1);
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)

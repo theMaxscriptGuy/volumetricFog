@@ -2,17 +2,9 @@
 #pragma kernel ClearFogTexture
 
 RWTexture3D<half4> volumeFogTexture;
-float4 _ZBufferParams;
-float4 _WorldSpaceCameraPos;
-float4 _ProjectionParams;
-float4 unity_CameraWorldClipPlanes[6];
-float4x4 refObjMatrix;
-float radius;
-float3 _RefPos;
-float HorizontalRes;
-float VerticalRes;
-float DepthRes;
-
+float fogMultiplier;
+float4 fogColor;
+float3 cameraPos;
 #include "common.cginc"
 
 
@@ -34,18 +26,19 @@ inline void ComputeFogTexture(uint3 id : SV_DispatchThreadID)
 {
 	uint3 writeId = uint3(id.xy, 0);
 
-	float4 scatterExtWrite = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 fogTextureValue = float4(fogColor.rgb,1.0);
 	for (writeId.z = 0; writeId.z < resolution.z; ++writeId.z) 
 	{
 		float3 uv = IDToUv(writeId, 0);
 		float3 device = ConvertUvToView(uv);
 		float3 worldPos = ConvertViewToWorld(device);
-		if (distance(worldPos, float3(0.0, 0.0, 0.0)) < 3.0)
-		{
-			scatterExtWrite += float4(0.0, 0.0, 0.0, 0.1);
-		}
-
-		volumeFogTexture[writeId] = scatterExtWrite;
+		float dist = distance(worldPos, cameraPos);
+		float z = (writeId.z*1.0) / (resolution.z*1.0);
+		float alpha = pow(z*dist, fogMultiplier);
+		
+		//fogTextureValue += float4(0.0,0.0,0.0, alpha);
+		fogTextureValue += float4(alpha,alpha,alpha, 0.0);
+		volumeFogTexture[writeId] = fogTextureValue;
 	}
 }
 
