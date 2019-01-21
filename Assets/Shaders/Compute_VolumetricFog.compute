@@ -1,43 +1,55 @@
-﻿// Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel ComputeFogTexture
+﻿#pragma kernel ComputeFogTexture
 #pragma kernel ClearFogTexture
+
+RWTexture3D<half4> volumeFogTexture;
+float4 _ZBufferParams;
+float4 _WorldSpaceCameraPos;
+float4 _ProjectionParams;
+float4 unity_CameraWorldClipPlanes[6];
+float4x4 refObjMatrix;
+float radius;
+float3 _RefPos;
+float HorizontalRes;
+float VerticalRes;
+float DepthRes;
 
 #include "common.cginc"
 
-RWTexture3D<float4> volumeFogTexture;
 
-[numthreads(8,8,1)]
+float3 IDToUv(uint3 id, float zcenter) {
+	return saturate(float3((id.x + 0.5f) / resolution.x, (id.y + 0.5f) / resolution.y, (id.z + zcenter) / resolution.z));
+}
+
+float distance(float3 v1, float3 v2)
+{
+	float floatX = (v2.x - v1.x)*(v2.x - v1.x);
+	float floatY = (v2.y - v1.y)*(v2.y - v1.y);
+	float floatZ = (v2.z - v1.z)*(v2.z - v1.z);
+
+	return sqrt(floatX + floatY + floatZ);
+}
+
+[numthreads(8, 8, 1)]
 inline void ComputeFogTexture(uint3 id : SV_DispatchThreadID)
 {
 	uint3 writeId = uint3(id.xy, 0);
 
-	float4 baseColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 scatterExtWrite = float4(0.0f, 0.0f, 0.0f, 1.0f);
 	for (writeId.z = 0; writeId.z < resolution.z; ++writeId.z) 
 	{
-		//convert the texture id's to uvs
-		float3 uv = float3(
-			(id.x*1.0)/resolution.x,
-			(id.y*1.0) / resolution.y,
-			(id.z*1.0) / resolution.z
-			);
-		//convert from uv to view/camera space
-		float3 viewSpace = ConvertUvToViewSpace(uv);
-
-		//convert to world space for calculations:
-		float3 worldPos = ConvertViewToWorld(viewSpace);
-
-		if (distance(worldPos, float3(0.0, 0.0, 0.0)) < 0.6)
+		float3 uv = IDToUv(writeId, 0);
+		float3 device = ConvertUvToView(uv);
+		float3 worldPos = ConvertViewToWorld(device);
+		if (distance(worldPos, float3(0.0, 0.0, 0.0)) < 3.0)
 		{
-			baseColor += float4(0.1, 0.0, 0.0, 0.0);
+			scatterExtWrite += float4(0.0, 0.0, 0.0, 0.1);
 		}
-		
-		volumeFogTexture[writeId] = baseColor;
+
+		volumeFogTexture[writeId] = scatterExtWrite;
 	}
-	//volumeFogTexture[id] = float4(0.0, 0.0, 1.0, 1.0);
 }
 
 [numthreads(4, 4, 4)]
-inline void ClearFogTexture(uint3 id : SV_DispatchThreadID)
-{
-	volumeFogTexture[id] = float4(0.0, 0.0, 0.0, 0.0);
+inline void ClearFogTexture(uint3 id : SV_DispatchThreadID) {
+	volumeFogTexture[id] = float4(0, 0, 0, 1);
 }

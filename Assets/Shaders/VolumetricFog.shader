@@ -72,8 +72,8 @@
 
 					float4 color = tex2D(_MainTex, coord);
 
-					float3 uv = WorldToVaporUv(world);
-					float4 fog = tex3Dlod(_VaporFogTexture, float4(uv, 0));
+					float3 uv = ConvertWorldToViewUv(world);
+					float4 fog = tex3Dlod(volumeTexture, float4(uv, 0));
 
 					return float4(color.rgb * fog.a + fog.rgb, color.a);
 			}

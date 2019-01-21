@@ -112,7 +112,7 @@ public class VolumetricFog : MonoBehaviour
             computeVolumeFog.SetInts("resolution", m_resolution);
             Shader.SetGlobalMatrix("_View_Projection", vp);
 
-            Shader.SetGlobalTexture("_VaporFogTexture", m_volumeFogTexture);
+            Shader.SetGlobalTexture("volumeTexture", m_volumeFogTexture);
             
             computeVolumeFog.SetTexture(m_volumeFogTextureKernel, "volumeFogTexture", m_volumeFogTexture);
             computeVolumeFog.Dispatch(m_volumeFogTextureKernel, m_volumeFogTexture.width, m_volumeFogTexture.height, 1);
