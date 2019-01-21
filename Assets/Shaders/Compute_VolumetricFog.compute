@@ -1,0 +1,43 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel ComputeFogTexture
+#pragma kernel ClearFogTexture
+
+#include "common.cginc"
+
+RWTexture3D<float4> volumeFogTexture;
+
+[numthreads(8,8,1)]
+inline void ComputeFogTexture(uint3 id : SV_DispatchThreadID)
+{
+	uint3 writeId = uint3(id.xy, 0);
+
+	float4 baseColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	for (writeId.z = 0; writeId.z < resolution.z; ++writeId.z) 
+	{
+		//convert the texture id's to uvs
+		float3 uv = float3(
+			(id.x*1.0)/resolution.x,
+			(id.y*1.0) / resolution.y,
+			(id.z*1.0) / resolution.z
+			);
+		//convert from uv to view/camera space
+		float3 viewSpace = ConvertUvToViewSpace(uv);
+
+		//convert to world space for calculations:
+		float3 worldPos = ConvertViewToWorld(viewSpace);
+
+		if (distance(worldPos, float3(0.0, 0.0, 0.0)) < 0.6)
+		{
+			baseColor += float4(0.1, 0.0, 0.0, 0.0);
+		}
+		
+		volumeFogTexture[writeId] = baseColor;
+	}
+	//volumeFogTexture[id] = float4(0.0, 0.0, 1.0, 1.0);
+}
+
+[numthreads(4, 4, 4)]
+inline void ClearFogTexture(uint3 id : SV_DispatchThreadID)
+{
+	volumeFogTexture[id] = float4(0.0, 0.0, 0.0, 0.0);
+}
