@@ -26,7 +26,7 @@ inline void ComputeFogTexture(uint3 id : SV_DispatchThreadID)
 {
 	uint3 writeId = uint3(id.xy, 0);
 
-	float4 fogTextureValue = float4(fogColor.rgb,1.0);
+	float4 fogTextureValue = float4(0.0,0.0,0.0,1.0);
 	for (writeId.z = 0; writeId.z < resolution.z; ++writeId.z) 
 	{
 		float3 uv = IDToUv(writeId, 0);
@@ -34,10 +34,13 @@ inline void ComputeFogTexture(uint3 id : SV_DispatchThreadID)
 		float3 worldPos = ConvertViewToWorld(device);
 		float dist = distance(worldPos, cameraPos);
 		float z = (writeId.z*1.0) / (resolution.z*1.0);
-		float alpha = pow(z*dist, fogMultiplier);
+		float alpha = pow(z, fogMultiplier/dist);
 		
+		fogColor *= dist/fogMultiplier;
 		//fogTextureValue += float4(0.0,0.0,0.0, alpha);
-		fogTextureValue += float4(alpha,alpha,alpha, 0.0);
+		fogTextureValue += float4(0.0,0.0,0.0, alpha);
+		fogTextureValue.rgb = fogColor.rgb;
+		fogTextureValue.a = clamp(0.0, fogMultiplier, fogTextureValue.a);
 		volumeFogTexture[writeId] = fogTextureValue;
 	}
 }
